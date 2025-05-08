@@ -20,13 +20,15 @@ public class Screenwriter : MonoBehaviour
     [System.Serializable]
     private class Script
     {
-
-        [SerializeField] private int CurrentIventID;
+        [SerializeField] private int CurrentIventID=0;
         public int currentIventID {  get { return CurrentIventID; } }
+
         [SerializeField] private List <ScriptAction> Actions = new List<ScriptAction>();
+        public List<ScriptAction> actions { get { return Actions; } }
+
         public void CheckActions(GameObject Trigger, Screenwriter screenwriter)
         {
-            int ForkID = Actions.Count-1;
+            int ForkID = Actions.Count - 1;
             for (int i = 0; i < Actions.Count; i++)
             {
                 if (Actions[i].ActionType == ScriptAction.ActionTypes.Fork)
@@ -34,20 +36,23 @@ public class Screenwriter : MonoBehaviour
                     ForkID = i; break;
                 }
             }
-            if (screenwriter.IsConditionsOk(Actions[CurrentIventID].Conditions, Trigger))
+            if (CurrentIventID < ForkID)
             {
-                if (CurrentIventID <= ForkID)
+                if (screenwriter.IsConditionsOk(Actions[CurrentIventID].Conditions, Trigger))
                 {
-                    Actions[CurrentIventID].DoAction(null, Trigger);
+                    Actions[CurrentIventID].DoAction(screenwriter, Trigger);
                     CurrentIventID += 1;
-                    //Активируется дважды при ивенте
                 }
-                else if (CurrentIventID == ForkID)
+            }
+            else if (CurrentIventID == ForkID)
+            {
+                if (Actions[CurrentIventID].ActionType == ScriptAction.ActionTypes.Fork || screenwriter.IsConditionsOk(Actions[CurrentIventID].Conditions, Trigger))
                 {
-                    Actions[CurrentIventID].DoAction(null, Trigger);
+                    Actions[CurrentIventID].DoAction(screenwriter, Trigger);
                 }
             }
         }
+
 /*        public void LoadProgress(int CurrentID)
         {
             for (int i = 0; i < CurrentID; i++)
@@ -78,6 +83,7 @@ public class Screenwriter : MonoBehaviour
 
         [Header("Fork")]
         [SerializeField] private List<Script> ScriptsOfActionsInFork = new List<Script>();
+        private int ChoosedScriptNum=-1;
 
         [Header("Destroy")]
         [SerializeField] private GameObject ToDestroy;
@@ -98,10 +104,18 @@ public class Screenwriter : MonoBehaviour
                 case ActionTypes.Instantiate:
                     Instantiate(ToInstantiate, Place.position, Place.rotation); break;
                 case ActionTypes.Fork:
-                    foreach (Script script in ScriptsOfActionsInFork)
+                    if (ChoosedScriptNum == -1)
                     {
-                        if(script.currentIventID!=0)
-                            script.CheckActions(Trigger, screenwriter);
+                        for (int i = 0; i < ScriptsOfActionsInFork.Count; i++)
+                        {
+                            if (screenwriter.IsConditionsOk(ScriptsOfActionsInFork[i].actions[0].conditions,Trigger))
+                            {
+                                ChoosedScriptNum=i; break;
+                            }
+                        }
+                    }else
+                    {
+                        ScriptsOfActionsInFork[ChoosedScriptNum].CheckActions(Trigger,screenwriter);
                     }
                     break;
                 case ActionTypes.DebugLog:   
